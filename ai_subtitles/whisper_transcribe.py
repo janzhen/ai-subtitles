@@ -158,7 +158,7 @@ async def main(
     write_srt(subs, srt_file)
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "audio_file", help="Path to the audio file to transcribe"

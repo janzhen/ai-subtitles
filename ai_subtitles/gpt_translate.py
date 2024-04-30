@@ -91,7 +91,7 @@ async def main(input, language, model):
     logger.info(f"Translated srt file saved to {output}")
 
 
-if __name__ == "__main__":
+def cli():
     parser = argparse.ArgumentParser(description="Translate srt file")
     parser.add_argument("input", type=str, help="Input srt file")
     parser.add_argument(

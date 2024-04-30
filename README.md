@@ -42,61 +42,45 @@ export OPENAI_API_KEY=sk-xxx
 
 ```sh
 # 转录字幕，支持音频、视频
-aisubs transcribe sample.mp4
+aisubs-transcribe sample.mp4
 less sample.srt  # 查看转录结果
 
 # 给定语言会更准确
-aisubs transcribe -l ja sample.mp4
+aisubs-transcribe -l ja sample.mp4
 
 # 转录指定片段
-aisubs transcribe --ss 1:00 --to 2:00 sample.mp4
+aisubs-transcribe --ss 1:00 --to 2:00 sample.mp4
 
 # 追加片段，字幕会合并到 sample.srt，但没有去重；合并前会创建备份
-aisubs transcribe --ss 4:00 --to 5:00 sample.mp4
+aisubs-transcribe --ss 4:00 --to 5:00 sample.mp4
 
 # 直接转录成英文（效果没有先转录成原语言再翻译的好）
-aisubs transcribe -t sample.mp4
+aisubs-transcribe -t sample.mp4
 ```
 
 翻译。
 
 ```sh
 # 翻译字幕成中文，如果字幕已经存在，会创建备份
-aisubs translate sample.srt
+aisubs-translate sample.srt
 less sample.zh.srt
 
-# 翻译成英文
-aisubs translate -l en sample.srt
+# 翻译成指定语言
+aisubs-translate -l en sample.srt
 
 # 指定 GPT model，默认是 gpt-4-turbo
-aisubs translate -m gpt-3.5-turbo sample.srt
+aisubs-translate -m gpt-3.5-turbo sample.srt
 ```
 
 ### 查看帮助
 
 ```sh
-# 查看帮助
-$ aisubs -h
-
-usage: aisubs [-h] [--verbose] {transcribe,translate} ...
-
-AI Subtitles CLI
-
-positional arguments:
-  {transcribe,translate}
-    transcribe          Transcribe a video
-    translate           Translate an srt file
-
-options:
-  -h, --help            show this help message and exit
-  --verbose, -v         Enable verbose logging
-  
 # 查看转录帮助
-$ aisubs transcribe -h
+$ aisubs-transcribe -h
 
-usage: aisubs transcribe [-h] [--language LANGUAGE] [--ss SS] [--to TO]
+usage: aisubs-transcribe [-h] [--language LANGUAGE] [--ss SS] [--to TO]
                          [--jobs JOBS] [--silence-thresh SILENCE_THRESH]
-                         [--translate]
+                         [--translate] [--verbose]
                          audio_file
 
 positional arguments:
@@ -112,11 +96,16 @@ options:
   --silence-thresh SILENCE_THRESH
                         Silence threshold in dB
   --translate, -t       Translate to English
+  --verbose, -v         Enable verbose logging
+
   
 # 查看翻译帮助
-$ aisubs translate -h
+$ aisubs-translate -h
 
-usage: aisubs translate [-h] [--language LANGUAGE] [--model MODEL] input
+usage: aisubs-translate [-h] [--language LANGUAGE] [--model MODEL] [--verbose]
+                        input
+
+Translate srt file
 
 positional arguments:
   input                 Input srt file
@@ -129,6 +118,7 @@ options:
   --model MODEL, -m MODEL
                         GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4,
                         etc., default is gpt-4-turbo
+  --verbose, -v         Verbose mode
 
 ```
 

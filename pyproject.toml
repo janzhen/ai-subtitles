@@ -23,7 +23,8 @@ dependencies = [
 dev = ["ruff"]
 
 [project.scripts]
-aisubs = "ai_subtitles:cli"
+aisubs-transcribe = "ai_subtitles.whisper_transcribe:cli"
+aisubs-translate = "ai_subtitles.gpt_translate:cli"
 
 [tool.ruff]
 select = ["E", "F", "W", "I"]
