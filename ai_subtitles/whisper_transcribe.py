@@ -27,7 +27,6 @@ SEMAPHORE = None
 
 async def transcribe(audio_file, language=None, offset=0, translate=False):
     async with SEMAPHORE:
-        # convert offset to 00:00:00.000 format
         offset = timedelta(milliseconds=offset)
         logger.info(f"Transcribing {offset}...")
 
@@ -111,19 +110,23 @@ def convert_audio(audio_file, ss=0, to=None, silence_thresh=-40):
     return [part for part in parts]
 
 
-def write_srt(subs, srt_file):
+def write_srt(subs, srt_file, merge=False):
     old_subs = []
     if srt_file.exists():
-        # make a backup and merge with the new content
-        logger.info("Srt file already exists, backing up and merging...")
-        with open(srt_file) as f:
-            old_subs = list(srt.parse(f.read()))
-
+        # read existing srt file
+        logger.info("Srt file already exists, backing up...")
         backup_file = srt_file.with_name(
             f"{srt_file.stem}.{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.srt"
         )
         srt_file.rename(backup_file)
         logger.info(f"Backup created: {backup_file}")
+
+        if merge:
+            logger.info("Merging with existing srt file...")
+            with open(backup_file) as f:
+                old_subs = list(srt.parse(f.read()))
+        else:
+            old_subs = []
 
     with open(srt_file, "w") as f:
         f.write(srt.compose(subs + old_subs))
@@ -137,6 +140,7 @@ async def main(
     to=None,
     silence_thresh=-40,
     jobs=4,
+    merge=False,
     translate=False,
 ):
     global SEMAPHORE
@@ -151,11 +155,13 @@ async def main(
     if to is not None and isinstance(to, str):
         to = sum(int(x) * 60**i for i, x in enumerate(reversed(to.split(":"))))
 
+    assert to is None or to > ss, "End time must be greater than start time"
+
     audio_parts = convert_audio(audio_file, ss, to, silence_thresh)
     subs = await transcribe_parts(audio_parts, language, ss, translate)
 
     srt_file = audio_file.with_suffix(".srt")
-    write_srt(subs, srt_file)
+    write_srt(subs, srt_file, merge=merge)
 
 
 def cli():
@@ -184,6 +190,12 @@ def cli():
         help="Silence threshold in dB",
     )
     parser.add_argument(
+        "--merge",
+        "-m",
+        action="store_true",
+        help="Merge with existing srt file",
+    )
+    parser.add_argument(
         "--translate", "-t", action="store_true", help="Translate to English"
     )
     parser.add_argument(
@@ -201,6 +213,7 @@ def cli():
             to=args.to,
             silence_thresh=args.silence_thresh,
             jobs=args.jobs,
+            merge=args.merge,
             translate=args.translate,
         )
     )
