@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-subtitles"
+description = "AI Subtitles"
+readme = "README.md"
+requires-python = ">=3.11"
+version = "1.0.0"
+authors = [
+  {name = "Zhen Zhijian", email = "jan365@gmail.com"},
+]
+dependencies = [
+    "httpx[socks]",
+    "openai",
+    "python-dotenv",
+    "pydub",
+    "srt",
+]
+
+[project.optional-dependencies]
+dev = ["ruff"]
+
+[project.scripts]
+aisubs = "ai_subtitles:cli"
+
+[tool.ruff]
+select = ["E", "F", "W", "I"]
+ignore = []
+fixable = ["E", "F", "W", "I"]
+unfixable = []
+line-length = 79

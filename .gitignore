@@ -1,0 +1,10 @@
+__pycache__
+.venv
+*.egg-info
+
+.env
+*.mp3
+*.mp4
+*.srt
+
+test_samples
