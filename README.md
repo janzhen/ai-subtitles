@@ -51,8 +51,8 @@ aisubs-transcribe -l ja sample.mp4
 # 转录指定片段
 aisubs-transcribe --ss 1:00 --to 2:00 sample.mp4
 
-# 追加片段，字幕会合并到 sample.srt，但没有去重；合并前会创建备份
-aisubs-transcribe --ss 4:00 --to 5:00 sample.mp4
+# 追加片段，-m 会让字幕合并到 sample.srt，但没有去重；合并前会创建备份
+aisubs-transcribe --ss 4:00 --to 5:00 -m sample.mp4
 
 # 直接转录成英文（效果没有先转录成原语言再翻译的好）
 aisubs-transcribe -t sample.mp4
