@@ -116,4 +116,4 @@ def cli():
 
     logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO)
 
-    asyncio.run(main(args.input, args.output, args.language, args.model))
+    asyncio.run(main(args.input, args.language, args.model))
