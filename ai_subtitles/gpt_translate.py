@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import argparse
 import asyncio
 import logging
@@ -25,23 +24,47 @@ The format of input is SRT. Translate the subtitle content only.
 Do not change the format of the input.
 """  # noqa
 
+SEMAPHORE = asyncio.Semaphore(4)
+
 
 async def gpt_translate(text, language, model):
-    completion = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": SYS_PROMPT % language},
-            {"role": "user", "content": text},
-        ],
-    )
+    async with SEMAPHORE:
+        completion = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYS_PROMPT % language},
+                {"role": "user", "content": text},
+            ],
+        )
 
     logger.debug(completion)
     return completion.choices[0].message.content
 
 
-async def main(input, language, model):
+async def translate_subtitles(subtitles, language, model):
     BATCH_SIZE = 50
 
+    tasks = []
+    async with asyncio.TaskGroup() as tg:
+        for i in range(0, len(subtitles), BATCH_SIZE):
+            content = srt.compose(subtitles[i : i + BATCH_SIZE])
+            logger.debug(f"srt content for translation: {content}")
+
+            tasks.append(
+                tg.create_task(gpt_translate(content, language, model))
+            )
+            logger.info(f"Task created for {i}-{i+BATCH_SIZE}")
+
+    trans_subtitles = []
+    for task in tasks:
+        translation = task.result()
+        logger.debug(f"Translation: {translation}")
+        trans_subtitles.extend(srt.parse(translation))
+
+    return trans_subtitles
+
+
+async def main(input, language, model):
     input = pathlib.Path(input)
     if not input.exists():
         logger.error(f"{input} does not exist")
@@ -60,22 +83,7 @@ async def main(input, language, model):
     logger.debug(f"Subtitles count: {len(subtitles)}")
     logger.info(f"Translating {input} to {language}")
 
-    tasks = []
-    async with asyncio.TaskGroup() as tg:
-        for i in range(0, len(subtitles), BATCH_SIZE):
-            content = srt.compose(subtitles[i : i + BATCH_SIZE])
-            logger.debug(f"srt content for translation: {content}")
-
-            tasks.append(
-                tg.create_task(gpt_translate(content, language, model))
-            )
-            logger.info(f"Task created for {i}-{i+BATCH_SIZE}")
-
-    trans_subtitles = []
-    for task in tasks:
-        translation = task.result()
-        logger.debug(f"Translation: {translation}")
-        trans_subtitles.extend(srt.parse(translation))
+    trans_subtitles = await translate_subtitles(subtitles, language, model)
     srt_content = srt.compose(trans_subtitles)
     logger.debug(f"Translated srt content: {srt_content}")
 
@@ -99,8 +107,8 @@ def cli():
         "--language",
         "-l",
         type=str,
-        default="zh-Hans",
-        help="Language code, e.g. zh-Hans, en, etc., default is zh-Hans",
+        default="zh-CN",
+        help="Language code, e.g. zh-CN, en, etc., default is zh-CN",
     )
     parser.add_argument(
         "--model",

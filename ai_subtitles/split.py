@@ -1,7 +1,10 @@
 import argparse
+import logging
 import pathlib
 
 from pydub import AudioSegment, effects, silence
+
+logger = logging.getLogger(__name__)
 
 
 def split(audio, silence_thresh, min_length):
@@ -31,7 +34,9 @@ def split(audio, silence_thresh, min_length):
 
 def main(input_file, silence_thresh, part_min_length):
     input_file = pathlib.Path(input_file)
-    assert input_file.exists(), f"File {input_file} does not exist"
+    if not input_file.exists():
+        logger.error(f"{input_file} does not exist")
+        return
     parts_dir = input_file.with_suffix("").with_name(
         f"{input_file.stem}_parts"
     )

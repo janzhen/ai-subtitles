@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import argparse
 import asyncio
 import logging
@@ -11,6 +10,7 @@ from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pydub import AudioSegment
 
+from .gpt_translate import translate_subtitles
 from .split import split
 
 logger = logging.getLogger(__name__)
@@ -24,24 +24,17 @@ client = AsyncOpenAI()
 SEMAPHORE = None
 
 
-async def transcribe(audio_file, language=None, offset=0, translate=False):
+async def transcribe(audio_file, language=None, offset=0):
     async with SEMAPHORE:
         offset = timedelta(milliseconds=offset)
         logger.info(f"Transcribing {offset}...")
 
-        if translate:
-            transcription = await client.audio.translations.create(
-                model="whisper-1",
-                file=("audio.mp3", audio_file),
-                response_format="srt",
-            )
-        else:
-            transcription = await client.audio.transcriptions.create(
-                model="whisper-1",
-                file=("audio.mp3", audio_file),
-                response_format="srt",
-                language=language,
-            )
+        transcription = await client.audio.transcriptions.create(
+            model="whisper-1",
+            file=("audio.mp3", audio_file),
+            response_format="srt",
+            language=language,
+        )
 
     # add start time to each subtitle
     subs_ajusted = []
@@ -55,7 +48,7 @@ async def transcribe(audio_file, language=None, offset=0, translate=False):
 
 
 async def transcribe_parts(
-    audio_parts, language=None, ss=0, translate=False
+    audio_parts, language=None, ss=0
 ) -> list[srt.Subtitle]:
     offset = ss * 1000
 
@@ -68,7 +61,6 @@ async def transcribe_parts(
                         audio_part.export(format="mp3"),
                         language,
                         offset,
-                        translate,
                     )
                 )
             )
@@ -146,6 +138,10 @@ def read_srt(srt_file: pathlib.Path) -> list[srt.Subtitle]:
         return []
 
 
+async def translate(subtitles, language, model):
+    return await translate_subtitles(subtitles, language, model)
+
+
 async def main(
     audio_file,
     language=None,
@@ -153,7 +149,8 @@ async def main(
     to=None,
     silence_thresh=-40,
     jobs=4,
-    translate=False,
+    translate_to=None,
+    translation_model=None,
 ):
     global SEMAPHORE
     SEMAPHORE = asyncio.Semaphore(max(jobs, 1))
@@ -176,14 +173,24 @@ async def main(
     srt_file = audio_file.with_suffix(".srt")
     original_subs = read_srt(srt_file)
     if overlap_check(original_subs, ss, to):
-        logger.error("Overlapping subtitles, please adjust start and end time "
-                     "or backup and remove the existing srt file.")
+        logger.error(
+            "Overlapping subtitles, please adjust start and end time "
+            "or backup and remove the existing srt file."
+        )
         return
 
     audio_parts = convert_audio(audio_file, ss, to, silence_thresh)
-    subs = await transcribe_parts(audio_parts, language, ss, translate)
+    subs = await transcribe_parts(audio_parts, language, ss)
 
     write_srt(original_subs + subs, srt_file)
+
+    if translate_to:
+        trans_subs = await translate(subs, translate_to, translation_model)
+        trans_srt_file = pathlib.Path(audio_file).with_suffix(
+            f".{translate_to.split('-')[0].split('_')[0]}.srt"
+        )
+        ori_trans_subs = read_srt(trans_srt_file)
+        write_srt(ori_trans_subs + trans_subs, trans_srt_file)
 
 
 def cli():
@@ -212,7 +219,17 @@ def cli():
         help="Silence threshold in dB",
     )
     parser.add_argument(
-        "--translate", "-t", action="store_true", help="Translate to English"
+        "--translate-to",
+        "-t",
+        default="zh-CN",
+        help="Language code, e.g. zh-CN, en, etc., default is zh-CN",
+    )
+    parser.add_argument(
+        "--translate-model",
+        "-m",
+        default="gpt-4-turbo",
+        help="GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4, etc., "
+        "default is gpt-4-turbo",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose logging"
@@ -229,6 +246,7 @@ def cli():
             to=args.to,
             silence_thresh=args.silence_thresh,
             jobs=args.jobs,
-            translate=args.translate,
+            translate_to=args.translate_to,
+            translation_model=args.translate_model,
         )
     )

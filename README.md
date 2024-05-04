@@ -43,7 +43,8 @@ export OPENAI_API_KEY=sk-xxx
 ```sh
 # 转录字幕，支持音频、视频
 aisubs-transcribe sample.mp4
-less sample.srt  # 查看转录结果
+# 查看转录结果
+less sample.srt
 
 # 给定语言会更准确
 aisubs-transcribe -l ja sample.mp4
@@ -51,14 +52,14 @@ aisubs-transcribe -l ja sample.mp4
 # 转录指定片段
 aisubs-transcribe --ss 1:00 --to 2:00 sample.mp4
 
-# 追加片段，-m 会让字幕合并到 sample.srt，但没有去重；合并前会创建备份
+# 多次执行会合并，合并前会创建备份
 aisubs-transcribe --ss 4:00 --to 5:00 -m sample.mp4
 
-# 直接转录成英文（效果没有先转录成原语言再翻译的好）
-aisubs-transcribe -t sample.mp4
+# 同时翻译成中文
+aisubs-transcribe -t zh-CN sample.mp4 
 ```
 
-翻译。
+如果没有在转录的同时翻译，也可以单独执行翻译。
 
 ```sh
 # 翻译字幕成中文，如果字幕已经存在，会创建备份
@@ -80,7 +81,8 @@ $ aisubs-transcribe -h
 
 usage: aisubs-transcribe [-h] [--language LANGUAGE] [--ss SS] [--to TO]
                          [--jobs JOBS] [--silence-thresh SILENCE_THRESH]
-                         [--translate] [--verbose]
+                         [--translate-to TRANSLATE_TO]
+                         [--translate-model TRANSLATE_MODEL] [--verbose]
                          audio_file
 
 positional arguments:
@@ -95,10 +97,13 @@ options:
   --jobs JOBS, -j JOBS  Number of parallel jobs
   --silence-thresh SILENCE_THRESH
                         Silence threshold in dB
-  --translate, -t       Translate to English
+  --translate-to TRANSLATE_TO, -t TRANSLATE_TO
+                        Language code, e.g. zh-CN, en, etc., default is zh-CN
+  --translate-model TRANSLATE_MODEL, -m TRANSLATE_MODEL
+                        GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4,
+                        etc., default is gpt-4-turbo
   --verbose, -v         Enable verbose logging
-
-  
+ 
 # 查看翻译帮助
 $ aisubs-translate -h
 
@@ -113,8 +118,7 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --language LANGUAGE, -l LANGUAGE
-                        Language code, e.g. zh-Hans, en, etc., default is zh-
-                        Hans
+                        Language code, e.g. zh-CN, en, etc., default is zh-CN
   --model MODEL, -m MODEL
                         GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4,
                         etc., default is gpt-4-turbo
