@@ -16,9 +16,8 @@ from .split import split
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-assert os.environ.get(
-    "OPENAI_API_KEY"
-), "Missing OPENAI_API_KEY. Set it in .env file or environment variable."
+if not os.environ.get("OPENAI_API_KEY"):
+    logger.error("Missing OPENAI_API_KEY. Set it environment variable.")
 
 client = AsyncOpenAI()
 
@@ -55,7 +54,9 @@ async def transcribe(audio_file, language=None, offset=0, translate=False):
     return subs_ajusted
 
 
-async def transcribe_parts(audio_parts, language=None, ss=0, translate=False):
+async def transcribe_parts(
+    audio_parts, language=None, ss=0, translate=False
+) -> list[srt.Subtitle]:
     offset = ss * 1000
 
     tasks = []
@@ -110,8 +111,7 @@ def convert_audio(audio_file, ss=0, to=None, silence_thresh=-40):
     return [part for part in parts]
 
 
-def write_srt(subs, srt_file, merge=False):
-    old_subs = []
+def write_srt(subs, srt_file):
     if srt_file.exists():
         # read existing srt file
         logger.info("Srt file already exists, backing up...")
@@ -121,16 +121,29 @@ def write_srt(subs, srt_file, merge=False):
         srt_file.rename(backup_file)
         logger.info(f"Backup created: {backup_file}")
 
-        if merge:
-            logger.info("Merging with existing srt file...")
-            with open(backup_file) as f:
-                old_subs = list(srt.parse(f.read()))
-        else:
-            old_subs = []
-
     with open(srt_file, "w") as f:
-        f.write(srt.compose(subs + old_subs))
+        f.write(srt.compose(subs))
     logger.info(f"Transcription saved to {srt_file}")
+
+
+def overlap_check(original_subs, ss, to) -> bool:
+    for sub in original_subs:
+        if sub.end.total_seconds() < ss:
+            continue
+        if to is not None and sub.start.total_seconds() > to:
+            continue
+        logger.info(f"Overlapping subtitle found: {sub.start} - {sub.end}")
+        return True
+
+    return False
+
+
+def read_srt(srt_file: pathlib.Path) -> list[srt.Subtitle]:
+    try:
+        with open(srt_file) as f:
+            return list(srt.parse(f.read()))
+    except FileNotFoundError:
+        return []
 
 
 async def main(
@@ -140,14 +153,15 @@ async def main(
     to=None,
     silence_thresh=-40,
     jobs=4,
-    merge=False,
     translate=False,
 ):
     global SEMAPHORE
     SEMAPHORE = asyncio.Semaphore(max(jobs, 1))
 
     audio_file = pathlib.Path(audio_file)
-    assert audio_file.exists(), f"File not found: {audio_file}"
+    if not audio_file.exists():
+        logger.error(f"File not found: {audio_file}")
+        return
 
     # ss and to may be seconds or timestamps like "00:00:00", parse to seconds
     if isinstance(ss, str):
@@ -155,13 +169,21 @@ async def main(
     if to is not None and isinstance(to, str):
         to = sum(int(x) * 60**i for i, x in enumerate(reversed(to.split(":"))))
 
-    assert to is None or to > ss, "End time must be greater than start time"
+    if to is not None and to <= ss:
+        logger.error("End time must be greater than start time")
+        return
+
+    srt_file = audio_file.with_suffix(".srt")
+    original_subs = read_srt(srt_file)
+    if overlap_check(original_subs, ss, to):
+        logger.error("Overlapping subtitles, please adjust start and end time "
+                     "or backup and remove the existing srt file.")
+        return
 
     audio_parts = convert_audio(audio_file, ss, to, silence_thresh)
     subs = await transcribe_parts(audio_parts, language, ss, translate)
 
-    srt_file = audio_file.with_suffix(".srt")
-    write_srt(subs, srt_file, merge=merge)
+    write_srt(original_subs + subs, srt_file)
 
 
 def cli():
@@ -190,12 +212,6 @@ def cli():
         help="Silence threshold in dB",
     )
     parser.add_argument(
-        "--merge",
-        "-m",
-        action="store_true",
-        help="Merge with existing srt file",
-    )
-    parser.add_argument(
         "--translate", "-t", action="store_true", help="Translate to English"
     )
     parser.add_argument(
@@ -213,7 +229,6 @@ def cli():
             to=args.to,
             silence_thresh=args.silence_thresh,
             jobs=args.jobs,
-            merge=args.merge,
             translate=args.translate,
         )
     )

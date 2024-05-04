@@ -13,9 +13,8 @@ from openai import AsyncOpenAI
 logger = logging.getLogger(__name__)
 
 load_dotenv()
-assert os.environ.get(
-    "OPENAI_API_KEY"
-), "Missing OPENAI_API_KEY. Set it in .env file or environment variable."
+if not os.environ.get("OPENAI_API_KEY"):
+    logger.error("Missing OPENAI_API_KEY. Set it environment variable.")
 
 client = AsyncOpenAI()
 
@@ -44,7 +43,9 @@ async def main(input, language, model):
     BATCH_SIZE = 50
 
     input = pathlib.Path(input)
-    assert input.exists(), f"{input} does not exist"
+    if not input.exists():
+        logger.error(f"{input} does not exist")
+        return
 
     output = pathlib.Path(input).with_suffix(
         f".{language.split('-')[0].split('_')[0]}.srt"
