@@ -102,21 +102,19 @@ async def main(input, language, model):
 
 def cli():
     parser = argparse.ArgumentParser(description="Translate srt file")
-    parser.add_argument("input", type=str, help="Input srt file")
+    parser.add_argument("input", help="Input srt file")
     parser.add_argument(
         "--language",
         "-l",
-        type=str,
         default="zh-CN",
         help="Language code, e.g. zh-CN, en, etc., default is zh-CN",
     )
     parser.add_argument(
         "--model",
         "-m",
-        type=str,
-        default="gpt-4-turbo",
+        default="gpt-3.5-turbo",
         help="GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4, etc., "
-        "default is gpt-4-turbo",
+        "default is gpt-3.5-turbo",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Verbose mode"

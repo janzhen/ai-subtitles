@@ -227,9 +227,9 @@ def cli():
     parser.add_argument(
         "--translate-model",
         "-m",
-        default="gpt-4-turbo",
+        default="gpt-3.5-turbo",
         help="GPT model, e.g. gpt-3.5-turbo, gpt-4-turbo, gpt-4, etc., "
-        "default is gpt-4-turbo",
+        "default is gpt-3.5-turbo",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Enable verbose logging"

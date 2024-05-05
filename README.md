@@ -41,22 +41,22 @@ export OPENAI_API_KEY=sk-xxx
 转录。
 
 ```sh
-# 转录字幕，支持音频、视频
-aisubs-transcribe sample.mp4
+# 转录字幕，并翻译成中文
+aisubs-transcribe -t zh-CN sample.mp4
 # 查看转录结果
-less sample.srt
+less sample.zh.srt
+
+# 只转录不翻译
+aisubs-transcribe sample.mp4
 
 # 给定语言会更准确
-aisubs-transcribe -l ja sample.mp4
+aisubs-transcribe -l ja -t zh-CN sample.mp4
 
 # 转录指定片段
-aisubs-transcribe --ss 1:00 --to 2:00 sample.mp4
+aisubs-transcribe -t zh-CN --ss 1:00 --to 2:00 sample.mp4
 
 # 多次执行会合并，合并前会创建备份
-aisubs-transcribe --ss 4:00 --to 5:00 -m sample.mp4
-
-# 同时翻译成中文
-aisubs-transcribe -t zh-CN sample.mp4 
+aisubs-transcribe -t zh-CN --ss 4:00 --to 5:00 -m sample.mp4
 ```
 
 如果没有在转录的同时翻译，也可以单独执行翻译。
