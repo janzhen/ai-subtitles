@@ -19,13 +19,13 @@ AI Subtitles 是一个从音频/视频转录字幕的工具，利用 OpenAI 的 
 用 pipx 安装。
 
 ```sh
-pipx install https://github.com/janzhen/ai-subtitles.git
+pipx install git+https://github.com/janzhen/ai-subtitles
 ```
 
 或者用 pip 安装，建议安装在 virtualenv 里。
 
 ```
-pip install https://github.com/janzhen/ai-subtitles.git
+pip install git+https://github.com/janzhen/ai-subtitles
 ```
 
 最后，在系统里安装 ffmpeg，详见“安装 ffmpeg”章节。
